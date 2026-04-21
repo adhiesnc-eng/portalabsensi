@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PORTAL UGD</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        /* Pop-up Install Style */
+        #pwa-prompt {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(150%);
+            width: 90%; max-width: 400px; background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
+            padding: 16px; border-radius: 24px; display: flex; align-items: center;
+            justify-content: space-between; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 10000;
+        }
+        #pwa-prompt.active { transform: translateX(-50%) translateY(0); }
+        .pwa-icon { width: 48px; height: 48px; background: #3b82f6; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 22px; }
+        .pwa-text { flex: 1; margin-left: 15px; }
+        .pwa-text h4 { margin: 0; color: white; font-size: 15px; font-weight: 700; }
+        .pwa-text p { margin: 0; color: #94a3b8; font-size: 12px; }
+        .btn-install { background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px; }
+
+        /* Update Toast Style */
+        #update-toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
+            background: #10b981; color: white; padding: 12px 24px; border-radius: 50px;
+            display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 20px rgba(16,185,129,0.3);
+            transition: all 0.5s ease; z-index: 10001;
+        }
+        #update-toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+    <iframe src="https://adhiesnc-eng.github.io/portalabsensi/"></iframe>
+
+    <div id="pwa-prompt">
+        <div class="pwa-icon">P</div>
+        <div class="pwa-text">
+            <h4>PORTAL UGD</h4>
+            <p>Dapatkan pengalaman aplikasi penuh</p>
+        </div>
+        <button class="btn-install" id="installBtn">INSTAL</button>
+    </div>
+
+    <div id="update-toast">
+        <span style="font-size: 13px; font-weight: 600;">Versi baru tersedia!</span>
+        <button onclick="window.location.reload()" style="background: white; color: #10b981; border: none; padding: 4px 12px; border-radius: 20px; font-weight: 800; cursor: pointer; font-size: 11px;">UPDATE</button>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        const promptUI = document.getElementById('pwa-prompt');
+        const updateUI = document.getElementById('update-toast');
+
+        // Logic 1: Handle Install Prompt
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        if (!isStandalone) {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                setTimeout(() => promptUI.classList.add('active'), 3000);
+            });
+        }
+
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') promptUI.classList.remove('active');
+                deferredPrompt = null;
+            }
+        });
+
+        // Logic 2: Handle Service Worker & Updates
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            updateUI.classList.add('show');
+                        }
+                    });
+                });
+            });
+        }
+    </script>
+</body>
+</html>
